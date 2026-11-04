@@ -1,0 +1,202 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <memory>
+#include <string>
+#include <stdexcept>
+#include <iomanip> #include <limits> using namespace std;
+class Advisory { 
+public:
+virtual void giveAdvice() const = 0;     virtual ~Advisory() {} 
+};
+class Crop { protected:
+string name, season;     double area, yieldPerAcre;     static int cropCount;
+public:     
+Crop(): name("Unknown"), area(1), season("Summer"),      yieldPerAcre(1) {       
+  cropCount++;     
+}
+Crop(string n, double a, string s, double y): name(n), area(a), season(s), yieldPerAcre(y) {         
+if (a <= 0 || y <= 0)            
+throw invalid_argument(                 
+"Area and yield must be positive!"      
+ );         
+cropCount++;     
+}
+virtual ~Crop() {         cropCount--;    
+ }
+virtual double calculateYield() const {         return area * yieldPerAcre;    
+ }
+virtual void display() const {         
+cout << "\nCrop Name  : " << name              << "\nArea (acres)    : " << area
+<< "\nSeason          : " << season
+<< "\nYield/Acre      : " << yieldPerAcre
+<< "\nTotal Yield     : "
+<< calculateYield() << " quintals\n";
+    }
+bool operator>(const Crop& other) const {         
+return calculateYield() > other.calculateYield();    
+ }
+virtual void saveToFile(ofstream& file) const {         file << "Crop Name: " << name             
+     << " | Type  : General Crop"
+     << " | Area  : " << area
+     << " acres | Season: " << season
+     << " | Yield/Acre  : " << yieldPerAcre                      << " | Total Yield      : " << calculateYield()              << " quintals\n";   
+  }
+    static int getCropCount() {         return cropCount;
+ }
+string getName() const {         return name; 
+} 
+};
+int Crop::cropCount = 0;
+
+class CerealCrop : public Crop, public Advisory { private:
+string fertilizerType;
+public:
+CerealCrop() : Crop(), fertilizerType("Urea") {}
+CerealCrop(string n, double a, string s, double y, string f): Crop(n, a, s, y), fertilizerType(f) {}
+    void display() const override {         
+cout << "\n--- Cereal Crop Details ---";         Crop::display();        
+ cout << "Fertilizer Type  : " << fertilizerType << "\n";
+}
+    void giveAdvice() const override {         
+cout << "Farming Advice: Use balanced fertilizer, "                           << "control weeds, and monitor soil moisture.\n"; 
+}
+void saveToFile(ofstream& file) const override {         file << "Crop Name: " << name              
+     << " | Type: Cereal"
+     << " | Area: " << area
+     << " acres | Season: " << season
+     << " | Yield/Acre  : " << yieldPerAcre
+     << " | Fertilizer  : " << fertilizerType
+     << " | Total Yield : " << calculateYield()
+     << " quintals\n";
+    }
+};
+class VegetableCrop : public Crop, public Advisory { private:
+int irrigationFrequency;
+public:     
+VegetableCrop() : Crop(), irrigationFrequency(3) {}
+VegetableCrop(string n, double a, string s, double y, int irrigation)     : Crop(n, a, s, y), irrigationFrequency(irrigation) {         
+if (irrigation <= 0)             
+throw invalid_argument(                 
+"Irrigation frequency must be positive!"
+ );     
+}
+    void display() const override {         
+cout << "\n--- Vegetable Crop Details ---";         Crop::display();         
+cout << "Irrigation : " << irrigationFrequency                 << " times per week\n"; 
+}
+    void giveAdvice() const override {         
+cout << "Farming Advice: Maintain proper irrigation, "                 << "check for pests, and use well-drained soil.\n";     
+}
+void saveToFile(ofstream& file) const override {         file << "Crop Name: " << name             
+     << " | Type: Vegetable"
+     << " | Area: " << area
+     << " acres | Season: " << season
+     << " | Yield/Acre: " << yieldPerAcre
+     << " | Irrigation: " << irrigationFrequency
+     << " times/week | Total Yield: "                 << calculateYield() << " quintals\n";
+    }
+};
+double readPositiveDouble(const string& message) {     double value;    
+ while (true) {         
+cout << message;         
+if (cin >> value && value > 0)             
+return value;
+cout << "Invalid input! Enter a positive number.\n";      cin.clear();
+cin.ignore(numeric_limits<streamsize>::max(), '\n');
+} 
+}
+int main() {     vector<unique_ptr<Crop>> crops;     int n;
+cout << fixed << setprecision(2);     
+cout << "====================================\n";    cout << "   SMART FARM MANAGEMENT SYSTEM\n";    
+ cout << "====================================\n";
+cout << "Enter number of crops to record: ";     
+while (!(cin >> n) || n <= 0) {         
+cout << "Invalid input! Enter a positive integer: ";         cin.clear();         cin.ignore(numeric_limits<streamsize>::max(), '\n');    
+ }
+try {         
+for (int i = 0; i < n; i++) {             int type;             
+string name, season;
+cout << "\n1. Cereal Crop\n";           
+cout << "2. Vegetable Crop\n";             
+cout << "Select crop type: ";             
+while (!(cin >> type) || (type != 1 && type != 2)) {                 cout << "Invalid choice! Enter 1 or 2: ";                 cin.clear();                 cin.ignore(numeric_limits<streamsize>::max(), '\n');             
+}
+cin.ignore(numeric_limits<streamsize>::max(), '\n');
+cout << "Enter crop name: ";             getline(cin, name);             
+cout << "Enter cultivation season: ";             getline(cin, season);
+double area = readPositiveDouble("Enter area in acres: ");             double yield = readPositiveDouble(                 
+"Enter yield per acre (quintals): "             
+);
+if (type == 1) {                 
+string fertilizer;                 
+cout << "Enter fertilizer type: ";                 getline(cin, fertilizer);
+crops.push_back(make_unique<CerealCrop>(                     
+name, area, season, yield, fertilizer                 
+));             
+} else {                
+ int irrigation;                 
+cout << "Enter irrigation frequency (times per week): ";
+while (!(cin >> irrigation) || irrigation <= 0) {                     cout << "Invalid input! Enter a positive integer: ";                     cin.clear();                     
+cin.ignore(
+numeric_limits<streamsize>::max(), '\n'                    
+ );                 
+}
+cin.ignore(numeric_limits<streamsize>::max(), '\n');
+crops.push_back(make_unique<VegetableCrop>(                     name, area, season, yield, irrigation               
+));
+}
+}
+
+
+cout << "\n========== CROP REPORT ==========\n";       
+for (const auto& crop : crops) {             
+crop->display();             
+const Advisory* advice =                 dynamic_cast<const Advisory*>(crop.get());             
+if (advice != nullptr)                 
+advice->giveAdvice();         
+}
+double totalYield = 0;         
+for (const auto& crop : crops)             totalYield += crop->calculateYield();
+cout << "\nTotal Farm Yield: " << totalYield << " quintals\n";         
+cout << "Total Crops Recorded: " << Crop::getCropCount() << "\n";
+
+if (crops.size() >= 2) {             
+cout << "\n========== CROP COMPARISON ==========\n";             if (*crops[0] > *crops[1]) {                 
+cout << crops[0]->getName()                      
+     << " has a higher yield than "
+     << crops[1]->getName() << ".\n";
+            
+} else if (*crops[1] > *crops[0]) {                 cout << crops[1]->getName()                      
+     << " has a higher yield than "
+     << crops[0]->getName() << ".\n";             
+} else {                 
+cout << "Both crops have equal yields.\n";             
+}
+ }
+
+ofstream outfile("crop_data.txt");         
+if (!outfile)             
+throw runtime_error("Unable to open file for writing!");
+outfile << "SMART FARM MANAGEMENT SYSTEM\n";         
+outfile << "====================================\n";         for (const auto& crop : crops)             
+crop->saveToFile(outfile);         
+outfile.close();
+cout << "\nCrop data saved successfully!\n";
+
+ifstream infile("crop_data.txt");         
+if (!infile)             
+throw runtime_error("Unable to open file for reading!");
+cout << "\n========== SAVED FILE DATA ==========\n";         string line;         
+while (getline(infile, line))             
+cout << line << '\n';         
+infile.close();     }     
+catch (const invalid_argument& e) {         
+cerr << "\nInvalid data: " << e.what() << '\n';         return 1;     }     
+catch (const exception& e) {         
+cerr << "\nError: " << e.what() << '\n';         
+return 1;     
+}
+cout << "\nProgram executed successfully!\n";     
+return 0;
+}
